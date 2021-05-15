@@ -128,7 +128,6 @@ simulator::simulator(uint32_t seed)
 		++index;
 	}
 	
-	
 	// Create camera
 	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual, CAMERA_DEFAULT_POSITION.x(), CAMERA_DEFAULT_POSITION.y(), CAMERA_DEFAULT_POSITION.z());
 	
@@ -164,7 +163,6 @@ void simulator::run()
 #endif
 		)
 	{
-
 		// Storing time in a static variable because might want to use last frametime in next frame
 		static float timeToProcess = 0.0f;
 		
