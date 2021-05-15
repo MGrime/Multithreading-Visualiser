@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="libraries">
+      <UniqueIdentifier>{9f68f937-3e4d-4fb6-ba70-1507f2ae272e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="libraries\sdl_init.cpp">
+      <Filter>libraries</Filter>
+    </ClCompile>
+    <ClCompile Include="libraries\timer.cpp">
+      <Filter>libraries</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libraries\sdl_init.h">
+      <Filter>libraries</Filter>
+    </ClInclude>
+    <ClInclude Include="libraries\timer.h">
+      <Filter>libraries</Filter>
+    </ClInclude>
+    <ClInclude Include="libraries\threadstream.hpp">
+      <Filter>libraries</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
