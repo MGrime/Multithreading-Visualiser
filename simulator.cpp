@@ -373,15 +373,8 @@ void simulator::process_collision_sweep(collision_work* work)
 		auto& mUniqueData = work->mCircleUnique[i];
 
 		// Pre-calculate
-		const float blo = -mColData.radius;
-		const float bro = mColData.radius;
-
-		const float sx = mColData.position.x();
-		const float sl = sx - mColData.radius;
-		const float sr = sx + mColData.radius;
-
-		const float sr_blo = sr - blo;
-		const float sl_bro = sl - bro;
+		const float rightBound = mColData.position.x() + mColData.radius + mColData.radius;
+		const float leftBound = mColData.position.x() - mColData.radius - mColData.radius;
 
 		// Perform line sweep binary search to find stationary circles that are overlapping
 		auto s = work->sCirclesCol;
@@ -391,11 +384,11 @@ void simulator::process_collision_sweep(collision_work* work)
 		do
 		{
 			circleFound = s + (e - s) / 2;
-			if (sr_blo <= circleFound->position.x())
+			if (rightBound <= circleFound->position.x())
 			{
 				e = circleFound;
 			}
-			else if (sl_bro >= circleFound->position.x())
+			else if (leftBound >= circleFound->position.x())
 			{
 				s = circleFound;
 			}
@@ -409,7 +402,7 @@ void simulator::process_collision_sweep(collision_work* work)
 		{
 			auto stationaryToStart = circleFound;
 			// Sweep right
-			while (sr_blo > stationaryToStart->position.x() && stationaryToStart != work->sCirclesCol + work->sNumberOfCircles)
+			while (rightBound > stationaryToStart->position.x() && stationaryToStart != work->sCirclesCol + work->sNumberOfCircles)
 			{
 				const Vector2f dxy = stationaryToStart->position - mColData.position;
 				const auto distance = dxy.norm();
@@ -444,7 +437,7 @@ void simulator::process_collision_sweep(collision_work* work)
 
 			stationaryToStart = circleFound;
 			// Sweep left
-			while (stationaryToStart-- != work->sCirclesCol && sl_bro < stationaryToStart->position.x())
+			while (stationaryToStart-- != work->sCirclesCol && leftBound < stationaryToStart->position.x())
 			{
 				const Vector2f dxy = stationaryToStart->position - mColData.position;
 				const auto distance = dxy.norm();

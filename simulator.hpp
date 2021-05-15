@@ -13,7 +13,7 @@
 class simulator
 {
 public:
-	simulator(uint32_t seed = 10000u);
+	simulator(uint32_t seed = SPAWN_SEED);
 
 	~simulator();
 	

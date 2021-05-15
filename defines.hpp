@@ -39,9 +39,10 @@ using Eigen::Vector3f;
 
 #pragma region CONSTANTS
 
-constexpr unsigned int NUM_OF_CIRCLES = 2000000;
-constexpr unsigned int NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
-constexpr unsigned int NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
+constexpr unsigned int	NUM_OF_CIRCLES = 2000000;
+constexpr unsigned int	NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
+constexpr unsigned int	NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
+constexpr uint32_t		SPAWN_SEED = 10000u;
 
 const Vector2f X_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
 const Vector2f Y_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
