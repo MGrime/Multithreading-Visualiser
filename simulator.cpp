@@ -164,6 +164,24 @@ void simulator::run()
 #endif
 		)
 	{
+
+		// Storing time in a static variable because might want to use last frametime in next frame
+		static float timeToProcess = 0.0f;
+		
+		#ifdef _USE_TL_ENGINE_
+
+		// Handle pause input seperately
+		handle_tl_pause();
+		// If paused
+		if (m_IsPaused)
+		{
+			timeToProcess = m_Timer.GetLapTime();
+			update_tl(timeToProcess);
+			// Skip loop
+			continue;
+		}
+		
+		#endif
 		
 		// Update positions single threaded
 		for (auto i = 0u; i < NUM_MOVING_CIRCLES; ++i)
@@ -246,7 +264,7 @@ void simulator::run()
 		}
 
 		// Get time without macro. This is because we need it for TL Engine
-		const float timeToProcess = m_Timer.GetLapTime();
+		timeToProcess = m_Timer.GetLapTime();
 
 		#ifdef _USE_TL_ENGINE_
 		
@@ -534,5 +552,13 @@ void simulator::update_tl(float deltaTime)
 	// Draw frame
 	m_TLEngine->DrawScene();
 	
+}
+
+void simulator::handle_tl_pause()
+{
+	if (m_TLEngine->KeyHit(tle::Key_P))
+	{
+		m_IsPaused = !m_IsPaused;
+	}
 }
 #endif

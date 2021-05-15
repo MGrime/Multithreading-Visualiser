@@ -73,9 +73,14 @@ private:
 	// Array to store model instnaces
 	std::array<tle::IModel*, NUM_STATIONARY_CIRCLES> m_StationaryCircleModels;
 	std::array<tle::IModel*, NUM_MOVING_CIRCLES> m_MovingCirclesModels;
+
+	// Pause visualsation
+	bool m_IsPaused = false;
 	
 	// Updates and draws frame
 	void update_tl(float deltaTime);
+
+	void handle_tl_pause();
 	
 	#endif
 

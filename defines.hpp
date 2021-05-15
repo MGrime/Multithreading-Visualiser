@@ -33,19 +33,19 @@ using Eigen::Vector3f;
 // NOTE - Timing is NOT accurate when visualization is setup. Also _OUTPUT_ALL_ will massively hurt renderer frame-rate
 // Also TL-Engine input will be REALLY laggy and strange
 // Lower number of circles if performance is bad on rendering. You can also increase the Spawn range to reduce multiple collisions per frame
-//#define _USE_TL_ENGINE_
+#define _USE_TL_ENGINE_
 
 #pragma endregion
 
 #pragma region CONSTANTS
 
-constexpr unsigned int	NUM_OF_CIRCLES = 2000000;
+constexpr unsigned int	NUM_OF_CIRCLES = 10000;
 constexpr unsigned int	NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
 constexpr unsigned int	NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
 constexpr uint32_t		SPAWN_SEED = 10000u;
 
-const Vector2f X_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
-const Vector2f Y_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
+const Vector2f X_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
+const Vector2f Y_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
 
 const Vector2f X_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
 const Vector2f Y_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
