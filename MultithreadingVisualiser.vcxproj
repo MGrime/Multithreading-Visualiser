@@ -131,6 +131,7 @@
       <SubSystem>Console</SubSystem>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalDependencies>SDL2.lib;TL-Engine2019Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/d2:-AllowCompatibleILVersions %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Message>Copying DLLs &amp; shaders...</Message>
@@ -196,6 +197,7 @@ copy "C:\ProgramData\TL-Engine\3rd Party\TL-Xtreme\shader\*.*" "$(OutDir)" &gt; 
       <OutputFile>$(SolutionDir)$(TargetName)$(TargetExt)</OutputFile>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>SDL2.lib;TL-Engine2019.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/d2:-AllowCompatibleILVersions %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Message>Copying DLLs &amp; shaders...</Message>

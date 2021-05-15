@@ -4,6 +4,12 @@
 #include "defines.hpp"
 #include "libraries/timer.h"
 
+#ifdef _USE_TL_ENGINE_
+
+#include <TL-Engine.h>
+
+#endif
+
 class simulator
 {
 public:
@@ -59,7 +65,25 @@ private:
 	
 	#pragma endregion
 	#endif
+
+	#ifdef _USE_TL_ENGINE_
+
+	// Engine variables
+	tle::I3DEngine* m_TLEngine;
+	tle::ICamera* m_TLCamera;
+
+	// Load different coloured squares for each type
+	tle::IMesh* m_StationaryMesh;
+	tle::IMesh* m_MovingMesh;
+
+	// Array to store model instnaces
+	std::array<tle::IModel*, NUM_STATIONARY_CIRCLES> m_StationaryCircleModels;
+	std::array<tle::IModel*, NUM_MOVING_CIRCLES> m_MovingCirclesModels;
 	
+	// Updates and draws frame
+	void update_tl();
+	
+	#endif
 
 };
 

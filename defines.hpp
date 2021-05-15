@@ -26,11 +26,17 @@ using Eigen::Vector3f;
 // Note will mess with _TIME_LOOPS_ - Results will not be accurate
 //#define _PAUSE_AFTER_EACH_FRAME_
 
+// Will use TL Engine to show a visualization of the simulation
+// NOTE - Timing is NOT accurate when visualization is setup. Also _OUTPUT_ALL_ will massively hurt renderer frame-rate
+// Also TL-Engine input will be REALLY laggy and strange
+// Lower number of circles if performance is bad on rendering
+#define _USE_TL_ENGINE_
+
 #pragma endregion
 
 #pragma region CONSTANTS
 
-constexpr unsigned int NUM_OF_CIRCLES = 2000000;
+constexpr unsigned int NUM_OF_CIRCLES = 100000;
 constexpr unsigned int NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
 constexpr unsigned int NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
 

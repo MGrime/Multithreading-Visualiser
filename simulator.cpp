@@ -98,6 +98,41 @@ simulator::simulator(uint32_t seed)
 	
 	#pragma endregion
 	#endif
+
+	#ifdef _USE_TL_ENGINE_
+	
+	// Create engine instance
+	m_TLEngine = New3DEngine(tle::kTLX);
+	m_TLEngine->StartWindowed(1000,1000);
+
+	// load default media folder
+	m_TLEngine->AddMediaFolder(R"(.\media)");
+
+	// Load meshes
+	m_StationaryMesh = m_TLEngine->LoadMesh("Stationary.x");
+	m_MovingMesh = m_TLEngine->LoadMesh("Moving.x");
+
+	// Create models
+	int index = 0;
+	for (auto& stationary : m_StationaryCollisionData)
+	{
+		m_StationaryCircleModels.at(index) = m_StationaryMesh->CreateModel(stationary.position.x(), stationary.position.y(), 0.0f);
+		m_StationaryCircleModels.at(index)->Scale(0.5f);
+		++index;
+	}
+	index = 0;
+	for (auto& moving : m_MovingCollisionData)
+	{
+		m_MovingCirclesModels.at(index) = m_MovingMesh->CreateModel(moving.position.x(), moving.position.y(), 0.0f);
+		m_MovingCirclesModels.at(index)->Scale(0.5f);
+		++index;
+	}
+	
+	
+	// Create camera
+	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual,0,0,-2250);
+	
+	#endif
 	
 }
 
@@ -108,6 +143,12 @@ simulator::~simulator()
 		auto& pairedWorker = m_CollisionWorkers.at(i);
 		pairedWorker.worker.thread.detach();
 	}
+	#ifdef _USE_TL_ENGINE_
+
+	m_TLEngine->Stop();
+	m_TLEngine->Delete();
+	
+	#endif
 }
 
 void simulator::run()
@@ -115,8 +156,22 @@ void simulator::run()
 	#ifdef _TIME_LOOPS_
 	m_Timer.Start();
 	#endif
-	while (true)
+
+	// Program loop is handled by different parts depending on if visual is running
+	while (
+#ifdef _USE_TL_ENGINE_
+		m_TLEngine->IsRunning()
+#else
+		true
+#endif
+		)
 	{
+		#ifdef _USE_TL_ENGINE_
+		// Update visualiser
+		update_tl();
+		
+		#endif
+		
 		// Update positions single threaded
 		for (auto i = 0u; i < NUM_MOVING_CIRCLES; ++i)
 		{
@@ -218,7 +273,7 @@ void simulator::check_collision(uint32_t threadIndex)
 #ifdef _LINE_SWEEP_
 		process_collision_sweep(&pairedWorker.work);
 #else
-		process_collision(&work);
+		process_collision(&pairedWorker.work);
 #endif
 
 		{
@@ -375,3 +430,21 @@ void simulator::process_collision_sweep(collision_work* work)
 	}
 #endif
 }
+
+#ifdef _USE_TL_ENGINE_
+void simulator::update_tl()
+{
+	// Update model positions
+	int index = 0;
+	for (auto& moving : m_MovingCollisionData)
+	{
+		m_MovingCirclesModels.at(index)->SetPosition(moving.position.x(), moving.position.y(), 0.0f);
+		++index;
+	}
+
+	
+	// Draw frame
+	m_TLEngine->DrawScene();
+	
+}
+#endif
