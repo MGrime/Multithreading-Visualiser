@@ -30,7 +30,11 @@ simulator::simulator(uint32_t seed)
 #endif
 		// Collision setup
 		sColData.position = Vector2f(positionXDist(rng), positionYDist(rng));
+#ifdef _RANDOM_RADIUS_
+		sColData.radius = rand_float_dist(CIRCLE_RADIUS_RANGE.x(), CIRCLE_RADIUS_RANGE.y())(rng);
+#else
 		sColData.radius = 1.0f;
+#endif
 	}
 
 	// Sort stationary circles to allow line sweep
@@ -65,7 +69,11 @@ simulator::simulator(uint32_t seed)
 		// Collision setup
 		mColData.position = Vector2f(positionXDist(rng), positionYDist(rng));
 		mColData.velocity = Vector2f(velocityXDist(rng), velocityYDist(rng));
+#ifdef _RANDOM_RADIUS_
+		mColData.radius = rand_float_dist(CIRCLE_RADIUS_RANGE.x(), CIRCLE_RADIUS_RANGE.y())(rng);
+#else
 		mColData.radius = 1.0f;
+#endif
 		
 		// Unique setup
 		mUniqueData.color = Vector3f(colorDist(rng), colorDist(rng), colorDist(rng));
@@ -127,6 +135,24 @@ simulator::simulator(uint32_t seed)
 		m_MovingCirclesModels.at(index)->Scale(0.5f);
 		++index;
 	}
+
+	// Need to scale accordingly. We can simply scale by radius multiplicatively
+	#ifdef _RANDOM_RADIUS_
+
+	index = 0;
+	for (auto& stationary : m_StationaryCircleModels)
+	{
+		stationary->Scale(0.5f * m_StationaryCollisionData.at(index).radius);
+		++index;
+	}
+	index = 0;
+	for (auto& moving : m_MovingCirclesModels)
+	{
+		moving->Scale(0.5f * m_MovingCollisionData.at(index).radius);
+		++index;
+	}
+	
+	#endif
 	
 	// Create camera
 	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual, CAMERA_DEFAULT_POSITION.x(), CAMERA_DEFAULT_POSITION.y(), CAMERA_DEFAULT_POSITION.z());
@@ -389,8 +415,13 @@ void simulator::process_collision_sweep(collision_work* work)
 		auto& mUniqueData = work->mCircleUnique[i];
 
 		// Pre-calculate
+#ifdef _RANDOM_RADIUS_
+		const float rightBound = mColData.position.x() + (2.0f * CIRCLE_RADIUS_RANGE.y());
+		const float leftBound = mColData.position.x() - (2.0f * CIRCLE_RADIUS_RANGE.y());
+#else
 		const float rightBound = mColData.position.x() + mColData.radius + mColData.radius;
 		const float leftBound = mColData.position.x() - mColData.radius - mColData.radius;
+#endif
 
 		// Perform line sweep binary search to find stationary circles that are overlapping
 		auto s = work->sCirclesCol;
@@ -400,6 +431,8 @@ void simulator::process_collision_sweep(collision_work* work)
 		do
 		{
 			circleFound = s + (e - s) / 2;
+
+			
 			if (rightBound <= circleFound->position.x())
 			{
 				e = circleFound;

@@ -27,13 +27,16 @@ using Eigen::Vector3f;
 
 // Will pause after each "frame" i.e. each time all circles processed
 // Note will mess with _TIME_LOOPS_ - Results will not be accurate
-// #define _PAUSE_AFTER_EACH_FRAME_
+//#define _PAUSE_AFTER_EACH_FRAME_
 
 // Will use TL Engine to show a visualization of the simulation
 // NOTE - Timing is NOT accurate when visualization is setup. Also _OUTPUT_ALL_ will massively hurt renderer frame-rate
 // Also TL-Engine input will be REALLY laggy and strange
 // Lower number of circles if performance is bad on rendering. You can also increase the Spawn range to reduce multiple collisions per frame
 #define _USE_TL_ENGINE_
+
+// will randomise radiuses of circles
+#define _RANDOM_RADIUS_
 
 #pragma endregion
 
@@ -47,6 +50,8 @@ constexpr uint32_t		SPAWN_SEED = 10000u;
 const Vector2f X_SPAWN_RANGE = Vector2f(-2000.0f, 2000.0f);
 const Vector2f Y_SPAWN_RANGE = Vector2f(-2000.0f, 2000.0f);
 
+const float CAMERA_START_Z = -((X_SPAWN_RANGE.y() - X_SPAWN_RANGE.x() + (Y_SPAWN_RANGE.y() - Y_SPAWN_RANGE.x())) / 2.0f);
+
 const Vector2f X_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
 const Vector2f Y_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
 
@@ -54,7 +59,15 @@ const Vector2f Y_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
 
 const float CAMERA_MOVE_SPEED = 100.0f;
 const float CAMERA_ZOOM_SPEED = 1000.0f;
-const Vector3f CAMERA_DEFAULT_POSITION = Vector3f(0.0f, 0.0f, -2250.0f);
+
+// Typically -1250 back from the spawn range for best results
+const Vector3f CAMERA_DEFAULT_POSITION = Vector3f(0.0f, 0.0f, CAMERA_START_Z - 1250.0f);
+
+#endif
+
+#ifdef _RANDOM_RADIUS_
+
+const Vector2f CIRCLE_RADIUS_RANGE = Vector2f(1.0f, 5.0f);
 
 #endif
 
