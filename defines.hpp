@@ -18,33 +18,44 @@ using Eigen::Vector3f;
 // Will output time to complete each loop
 #define _TIME_LOOPS_
 
+// Will track how many collisions each frame
+#define _TRACK_COLLISIONS_
+
 // Will use improved algorithm
 // Line sweep can handle easily 2 million in the same time it takes standard to do 100k
 #define _LINE_SWEEP_
 
 // Will pause after each "frame" i.e. each time all circles processed
 // Note will mess with _TIME_LOOPS_ - Results will not be accurate
-//#define _PAUSE_AFTER_EACH_FRAME_
+// #define _PAUSE_AFTER_EACH_FRAME_
 
 // Will use TL Engine to show a visualization of the simulation
 // NOTE - Timing is NOT accurate when visualization is setup. Also _OUTPUT_ALL_ will massively hurt renderer frame-rate
 // Also TL-Engine input will be REALLY laggy and strange
-// Lower number of circles if performance is bad on rendering
-#define _USE_TL_ENGINE_
+// Lower number of circles if performance is bad on rendering. You can also increase the Spawn range to reduce multiple collisions per frame
+//#define _USE_TL_ENGINE_
 
 #pragma endregion
 
 #pragma region CONSTANTS
 
-constexpr unsigned int NUM_OF_CIRCLES = 100000;
+constexpr unsigned int NUM_OF_CIRCLES = 2000000;
 constexpr unsigned int NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
 constexpr unsigned int NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
 
-const Vector2f X_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
-const Vector2f Y_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
+const Vector2f X_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
+const Vector2f Y_SPAWN_RANGE = Vector2f(-5000.0f, 5000.0f);
 
 const Vector2f X_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
 const Vector2f Y_VELOCITY_RANGE = Vector2f(-5.0f, 5.0f);
+
+#ifdef _USE_TL_ENGINE_
+
+const float CAMERA_MOVE_SPEED = 100.0f;
+const float CAMERA_ZOOM_SPEED = 1000.0f;
+const Vector3f CAMERA_DEFAULT_POSITION = Vector3f(0.0f, 0.0f, -2250.0f);
+
+#endif
 
 #pragma endregion
 
@@ -103,6 +114,12 @@ struct collision_work
 	moving_circle_data* mCirclesCol = nullptr;
 	circle_unique_data* mCircleUnique = nullptr;
 	size_t					mNumberOfCircles = 0u;
+	
+	#ifdef _TRACK_COLLISIONS_
+	// how many collision happened in this threads work
+	uint32_t numberOfCollisions = 0u;
+	#endif
+	
 };
 
 // Not sure if ill need this but nice to have

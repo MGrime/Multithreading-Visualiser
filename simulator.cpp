@@ -130,7 +130,7 @@ simulator::simulator(uint32_t seed)
 	
 	
 	// Create camera
-	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual,0,0,-2250);
+	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual, CAMERA_DEFAULT_POSITION.x(), CAMERA_DEFAULT_POSITION.y(), CAMERA_DEFAULT_POSITION.z());
 	
 	#endif
 	
@@ -153,9 +153,7 @@ simulator::~simulator()
 
 void simulator::run()
 {
-	#ifdef _TIME_LOOPS_
 	m_Timer.Start();
-	#endif
 
 	// Program loop is handled by different parts depending on if visual is running
 	while (
@@ -166,11 +164,6 @@ void simulator::run()
 #endif
 		)
 	{
-		#ifdef _USE_TL_ENGINE_
-		// Update visualiser
-		update_tl();
-		
-		#endif
 		
 		// Update positions single threaded
 		for (auto i = 0u; i < NUM_MOVING_CIRCLES; ++i)
@@ -198,6 +191,13 @@ void simulator::run()
 			pairedWorker.work.mCircleUnique = movingUniquePointer;
 			pairedWorker.work.mNumberOfCircles = static_cast<uint32_t>(m_MovingCollisionData.size() / m_NumWorkers);
 
+			// Reset number of collisions
+			#ifdef _TRACK_COLLISIONS_
+
+			pairedWorker.work.numberOfCollisions = 0u;
+
+			#endif
+
 			// Flag the work as incomplete
 			{
 				std::unique_lock<std::mutex> l(pairedWorker.worker.lock);
@@ -221,10 +221,16 @@ void simulator::run()
 		mainThreadWork.sCirclesMutexes = m_StationaryMutexes.data();
 		mainThreadWork.sNumberOfCircles = NUM_STATIONARY_CIRCLES;
 
-
 		mainThreadWork.mCirclesCol = movingColPointer;
 		mainThreadWork.mCircleUnique = movingUniquePointer;
 		mainThreadWork.mNumberOfCircles = remainingCircles;
+
+		// Reset number of collisions
+		#ifdef _TRACK_COLLISIONS_
+
+		mainThreadWork.numberOfCollisions = 0u;
+
+		#endif
 
 		// Process
 		process_collision(&mainThreadWork);
@@ -239,12 +245,32 @@ void simulator::run()
 			}
 		}
 
-		// Output macro dependent how long the loop took
-		#ifdef _TIME_LOOPS_
-
+		// Get time without macro. This is because we need it for TL Engine
 		const float timeToProcess = m_Timer.GetLapTime();
-		TOUT << "Processed " << NUM_OF_CIRCLES << " circles in " << timeToProcess << '\n';
+
+		#ifdef _USE_TL_ENGINE_
 		
+		// Update visualiser
+		update_tl(timeToProcess);
+
+		#endif
+		
+		// Output macro dependent how long the loop took
+
+		// Want to output time
+		#ifdef _TIME_LOOPS_
+			#ifdef _TRACK_COLLISIONS_
+				uint32_t totalCollisions = 0u;
+
+				for (auto& pairedWorker : m_CollisionWorkers)
+				{
+					totalCollisions += pairedWorker.work.numberOfCollisions;
+				}
+		
+				TOUT << "Processed " << NUM_OF_CIRCLES << " circles in " << timeToProcess << " Total Collisions: " << totalCollisions << '\n';
+			#else
+				TOUT << "Processed " << NUM_OF_CIRCLES << " circles in " << timeToProcess << '\n';
+			#endif
 		#endif
 
 		#ifdef  _PAUSE_AFTER_EACH_FRAME_
@@ -320,9 +346,16 @@ void simulator::process_collision(collision_work* work)
 				mColData.velocity = mColData.velocity - 2.0f * norm * mColData.velocity.dot(norm);
 
 				// Output macro dependent
-			#ifdef _OUTPUT_ALL_
+				#ifdef _OUTPUT_ALL_
 				TOUT << mUniqueData.name << " HP: " << mUniqueData.hp << " hit " << sUniqueData.name << " HP: " << sUniqueData.hp << '\n';
-			#endif				
+				#endif
+
+				// Track how many collision this thread handles
+				#ifdef _TRACK_COLLISIONS_
+
+				work->numberOfCollisions++;
+				
+				#endif
 			}
 			
 		}
@@ -392,11 +425,19 @@ void simulator::process_collision_sweep(collision_work* work)
 					const auto norm = dxy.normalized();
 					mColData.velocity = mColData.velocity - 2.0f * norm * mColData.velocity.dot(norm);
 
-				#ifdef _OUTPUT_ALL_
+					#ifdef _OUTPUT_ALL_
+					
 					TOUT << mUniqueData.name << " HP: " << mUniqueData.hp << " hit " << work->sCirclesUnique[stationaryToStart->uniqueIndex].name << " HP: " << work->sCirclesUnique[stationaryToStart->uniqueIndex].hp << '\n';
-				#endif
-				}
+					
+					#endif
 
+					// Track how many collision this thread handles
+					#ifdef _TRACK_COLLISIONS_
+
+					work->numberOfCollisions++;
+
+					#endif
+				}
 				
 				++stationaryToStart;
 			}
@@ -419,9 +460,16 @@ void simulator::process_collision_sweep(collision_work* work)
 					const auto norm = dxy.normalized();
 					mColData.velocity = mColData.velocity - 2.0f * norm * mColData.velocity.dot(norm);
 
-#ifdef _OUTPUT_ALL_
+					#ifdef _OUTPUT_ALL_
 					TOUT << mUniqueData.name << " HP: " << mUniqueData.hp << " hit " << work->sCirclesUnique[stationaryToStart->uniqueIndex].name << " HP: " << work->sCirclesUnique[stationaryToStart->uniqueIndex].hp << '\n';
-#endif
+					#endif
+
+					// Track how many collision this thread handles
+					#ifdef _TRACK_COLLISIONS_
+
+					work->numberOfCollisions++;
+
+					#endif
 				}
 			}
 			
@@ -432,8 +480,9 @@ void simulator::process_collision_sweep(collision_work* work)
 }
 
 #ifdef _USE_TL_ENGINE_
-void simulator::update_tl()
+void simulator::update_tl(float deltaTime)
 {
+	#pragma region UPDATE VISUALISATION
 	// Update model positions
 	int index = 0;
 	for (auto& moving : m_MovingCollisionData)
@@ -441,7 +490,53 @@ void simulator::update_tl()
 		m_MovingCirclesModels.at(index)->SetPosition(moving.position.x(), moving.position.y(), 0.0f);
 		++index;
 	}
+	#pragma endregion
 
+	#pragma region UPDATE CAMERA
+	// Get current positions
+	auto currentXPos = m_TLCamera->GetX();
+	auto currentYPos = m_TLCamera->GetY();
+	auto currentZPos = m_TLCamera->GetZ();
+
+	// ZOOM	
+	if (m_TLEngine->KeyHeld(tle::Key_E))
+	{
+		currentZPos += CAMERA_ZOOM_SPEED * deltaTime;
+	}
+	if (m_TLEngine->KeyHeld(tle::Key_Q))
+	{
+		currentZPos -= CAMERA_ZOOM_SPEED * deltaTime;
+	}
+
+	// MOVEMENT
+	if (m_TLEngine->KeyHeld(tle::Key_W))
+	{
+		currentYPos += CAMERA_MOVE_SPEED * deltaTime;
+	}
+	if (m_TLEngine->KeyHeld(tle::Key_S))
+	{
+		currentYPos -= CAMERA_MOVE_SPEED * deltaTime;
+	}
+	if (m_TLEngine->KeyHeld(tle::Key_A))
+	{
+		currentXPos -= CAMERA_MOVE_SPEED * deltaTime;
+	}
+	if (m_TLEngine->KeyHeld(tle::Key_D))
+	{
+		currentXPos += CAMERA_MOVE_SPEED * deltaTime;
+	}
+
+	
+	// RESET
+	if (m_TLEngine->KeyHeld(tle::Key_R))
+	{
+		currentXPos = CAMERA_DEFAULT_POSITION.x();
+		currentYPos = CAMERA_DEFAULT_POSITION.y();
+		currentZPos = CAMERA_DEFAULT_POSITION.z();
+	}
+
+	m_TLCamera->SetPosition(currentXPos, currentYPos, currentZPos);
+	#pragma endregion
 	
 	// Draw frame
 	m_TLEngine->DrawScene();

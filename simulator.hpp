@@ -58,14 +58,8 @@ private:
 	
 	#pragma endregion
 
-	#ifdef _TIME_LOOPS_
-	#pragma region INSTRUMENTATION
-
 	msc::platform::Timer m_Timer;
 	
-	#pragma endregion
-	#endif
-
 	#ifdef _USE_TL_ENGINE_
 
 	// Engine variables
@@ -81,7 +75,7 @@ private:
 	std::array<tle::IModel*, NUM_MOVING_CIRCLES> m_MovingCirclesModels;
 	
 	// Updates and draws frame
-	void update_tl();
+	void update_tl(float deltaTime);
 	
 	#endif
 
