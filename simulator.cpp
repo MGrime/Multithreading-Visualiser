@@ -89,7 +89,6 @@ simulator::simulator(uint32_t seed)
 	if (m_NumWorkers == 0) m_NumWorkers = 8;
 	// Main thread already running
 	--m_NumWorkers;
-	TOUT << "Using " << m_NumWorkers << " threads!\n";
 	// Setup threads
 	for (uint32_t i = 0; i < m_NumWorkers; ++i)
 	{
@@ -116,10 +115,13 @@ simulator::simulator(uint32_t seed)
 	// load default media folder
 	m_TLEngine->AddMediaFolder(R"(.\media)");
 
+	// Set title
+	m_TLEngine->SetWindowCaption("Multi-threaded Collision Simulator - Using " + std::to_string(m_NumWorkers + 1) + " threads!");
+
 	// Load meshes
 	m_StationaryMesh = m_TLEngine->LoadMesh("Stationary.x");
 	m_MovingMesh = m_TLEngine->LoadMesh("Moving.x");
-
+	
 	// Create models
 	int index = 0;
 	for (auto& stationary : m_StationaryCollisionData)
@@ -156,9 +158,12 @@ simulator::simulator(uint32_t seed)
 	
 	// Create camera
 	m_TLCamera = m_TLEngine->CreateCamera(tle::ECameraType::kManual, CAMERA_DEFAULT_POSITION.x(), CAMERA_DEFAULT_POSITION.y(), CAMERA_DEFAULT_POSITION.z());
+
+	m_TLCamera->SetFarClip(1000000.0f);
 	
 	#endif
-	
+
+	output_beginning_message();
 }
 
 simulator::~simulator()
@@ -227,7 +232,6 @@ void simulator::run()
 			pairedWorker.work.sCirclesCol = m_StationaryCollisionData.data();
 			pairedWorker.work.sCirclesUnique = m_StationaryUniqueData.data();
 			pairedWorker.work.sCirclesMutexes = m_StationaryMutexes.data();
-			pairedWorker.work.sNumberOfCircles = NUM_STATIONARY_CIRCLES;
 
 			pairedWorker.work.mCirclesCol = movingColPointer;
 			pairedWorker.work.mCircleUnique = movingUniquePointer;
@@ -261,7 +265,6 @@ void simulator::run()
 		mainThreadWork.sCirclesCol = m_StationaryCollisionData.data();
 		mainThreadWork.sCirclesUnique = m_StationaryUniqueData.data();
 		mainThreadWork.sCirclesMutexes = m_StationaryMutexes.data();
-		mainThreadWork.sNumberOfCircles = NUM_STATIONARY_CIRCLES;
 
 		mainThreadWork.mCirclesCol = movingColPointer;
 		mainThreadWork.mCircleUnique = movingUniquePointer;
@@ -275,7 +278,7 @@ void simulator::run()
 		#endif
 
 		// Process
-		process_collision(&mainThreadWork);
+		process_collision_sweep(&mainThreadWork);
 
 		// Wait for workers to finish
 		for (auto i = 0u; i < m_NumWorkers; ++i)
@@ -325,6 +328,40 @@ void simulator::run()
 	}
 }
 
+// Outputs the program state to the console
+void simulator::output_beginning_message()
+{
+	// Output console message for nice display
+	TOUT << "CO4302 - Multi-threaded Circle Collision Simulator\n";
+	// Plus 1 for main thread
+	TOUT << "Using " << m_NumWorkers + 1 << " threads!\n";
+	// Output shared config by all setups
+	TOUT << "Simulation Configuration:\n";
+	TOUT << "\tCircles: " << NUM_OF_CIRCLES << '\n';
+	TOUT << "\tSeed: " << SPAWN_SEED << '\n';
+	TOUT << "\tSpawn Range X: " << X_SPAWN_RANGE.x() << " --> " << X_SPAWN_RANGE.y() << " Y: " << Y_SPAWN_RANGE.x() << " --> " << Y_SPAWN_RANGE.y() << '\n';
+	TOUT << "\tInitial Velocities X: " << X_VELOCITY_RANGE.x() << " --> " << X_VELOCITY_RANGE.y() << " Y: " << Y_VELOCITY_RANGE.x() << " --> " << Y_VELOCITY_RANGE.y() << '\n';
+	// Output enabled flags and matching info
+	TOUT << "Enabled Flags:\n";
+#ifdef _OUTPUT_ALL_
+	TOUT << "\t_OUTPUT_ALL_ : Output information about every single collision\n";
+#endif
+#ifdef _TIME_LOOPS_
+	TOUT << "\t_TIME_LOOPS_ : Output accurate time after each simulation 'frame'. Only accurate when _OUTPUT_ALL_,_USE_TL_ENGINE_ and _PAUSE_AFTER_EACH_FRAME_ are off\n";
+#endif
+#ifdef _PAUSE_AFTER_EACH_FRAME_
+	TOUT << "\t_PAUSE_AFTER_EACH_FRAME_ : Stops execution after each simulation 'frame'. Press ENTER to perform next frame\n";
+#endif
+#ifdef _USE_TL_ENGINE_
+	TOUT << "\t_USE_TL_ENGINE_ : Setup a TL-Engine instance to visualise the simulation. Destroys accuracy of timing & limits number of Circles to around 100k\n";
+#endif
+#ifdef _RANDOM_RADIUS_
+	TOUT << "\t_RANDOM_RADIUS_ : Randomises the radius of all circles\n";
+	TOUT << "\t\tRadius Range: " << CIRCLE_RADIUS_RANGE.x() << " --> " << CIRCLE_RADIUS_RANGE.y() << '\n';
+#endif
+	TOUT << "Simulation Output:\n\n";
+}
+
 void simulator::check_collision(uint32_t threadIndex)
 {
 	auto& pairedWorker = m_CollisionWorkers.at(threadIndex);
@@ -338,11 +375,7 @@ void simulator::check_collision(uint32_t threadIndex)
 		}
 
 		// Do work
-#ifdef _LINE_SWEEP_
 		process_collision_sweep(&pairedWorker.work);
-#else
-		process_collision(&pairedWorker.work);
-#endif
 
 		{
 			std::unique_lock<std::mutex> l(pairedWorker.worker.lock);
@@ -354,61 +387,8 @@ void simulator::check_collision(uint32_t threadIndex)
 	
 }
 
-void simulator::process_collision(collision_work* work)
-{
-	// Check each moving circle in this section
-	for (auto i = 0u; i < work->mNumberOfCircles; ++i)
-	{
-		auto& mColData = work->mCirclesCol[i];
-		auto& mUniqueData = work->mCircleUnique[i];
-
-		// check every single stationary circle
-		for (auto j = 0u; j < work->sNumberOfCircles; ++j)
-		{
-			// Get reference to static data
-			auto& sColData = work->sCirclesCol[j];
-			auto& sUniqueData = work->sCirclesUnique[j];
-			auto& sMutex = work->sCirclesMutexes[j];
-
-			// Workout distance between and compare to radius combined
-			const Vector2f dxy = sColData.position - mColData.position;
-			const auto distance = dxy.norm();
-			// If true then collision occurred
-			if (distance < mColData.radius + sColData.radius)
-			{
-				// Lose health. Lock stationary health change behind mutex
-				mUniqueData.hp -= 20;
-				{
-					std::unique_lock<std::mutex> l(sMutex);
-					sUniqueData.hp -= 20;
-				}
-
-				// Reflect moving circles velocity
-				const auto norm = dxy.normalized();
-				mColData.velocity = mColData.velocity - 2.0f * norm * mColData.velocity.dot(norm);
-
-				// Output macro dependent
-				#ifdef _OUTPUT_ALL_
-				TOUT << mUniqueData.name << " HP: " << mUniqueData.hp << " hit " << sUniqueData.name << " HP: " << sUniqueData.hp << '\n';
-				#endif
-
-				// Track how many collision this thread handles
-				#ifdef _TRACK_COLLISIONS_
-
-				work->numberOfCollisions++;
-				
-				#endif
-			}
-			
-		}
-		
-	}
-}
-
 void simulator::process_collision_sweep(collision_work* work)
 {
-	// This function compiles to nothing when the macro is disabled
-#ifdef _LINE_SWEEP_
 	for (auto i = 0u; i < work->mNumberOfCircles; ++i)
 	{
 		auto& mColData = work->mCirclesCol[i];
@@ -425,7 +405,7 @@ void simulator::process_collision_sweep(collision_work* work)
 
 		// Perform line sweep binary search to find stationary circles that are overlapping
 		auto s = work->sCirclesCol;
-		auto e = work->sCirclesCol + work->sNumberOfCircles;
+		auto e = work->sCirclesCol + NUM_STATIONARY_CIRCLES;
 		stationary_circle_data* circleFound;
 		bool found = false;
 		do
@@ -446,17 +426,20 @@ void simulator::process_collision_sweep(collision_work* work)
 				found = true;
 			}
 		} while (!found && e - s > 1);
-
+		
 		if (found)
 		{
 			auto stationaryToStart = circleFound;
 			// Sweep right
-			while (rightBound > stationaryToStart->position.x() && stationaryToStart != work->sCirclesCol + work->sNumberOfCircles)
+			while (rightBound > stationaryToStart->position.x() && stationaryToStart != work->sCirclesCol + NUM_STATIONARY_CIRCLES)
 			{
 				const Vector2f dxy = stationaryToStart->position - mColData.position;
 				const auto distance = dxy.norm();
+
+				// THIS BEING TRUE IS THE MOST EXPENSIVE PART 
 				if (distance < mColData.radius + stationaryToStart->radius)
 				{
+					
 					mUniqueData.hp -= 20;
 					{
 						std::unique_lock<std::mutex> l(work->sCirclesMutexes[stationaryToStart->uniqueIndex]);
@@ -490,6 +473,8 @@ void simulator::process_collision_sweep(collision_work* work)
 			{
 				const Vector2f dxy = stationaryToStart->position - mColData.position;
 				const auto distance = dxy.norm();
+
+				// THIS BEING TRUE IS THE MOST EXPENSIVE PART 
 				if (distance < mColData.radius + stationaryToStart->radius)
 				{
 					mUniqueData.hp -= 20;
@@ -516,9 +501,7 @@ void simulator::process_collision_sweep(collision_work* work)
 			}
 			
 		}
-		
 	}
-#endif
 }
 
 #ifdef _USE_TL_ENGINE_
