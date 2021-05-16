@@ -50,9 +50,9 @@ private:
 	#pragma endregion
 
 	#pragma region FUNCTIONS
-
+	// Outputs the program state to the console
+	void output_beginning_message();
 	void check_collision(uint32_t threadIndex);
-	void process_collision(collision_work* work);
 	// As above but with a line sweep algorithm
 	void process_collision_sweep(collision_work* work);
 	
