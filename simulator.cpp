@@ -23,11 +23,8 @@ simulator::simulator(uint32_t seed)
 	for (auto i = 0u; i < NUM_STATIONARY_CIRCLES; ++i)
 	{
 		// Get array refs
-#ifdef _LINE_SWEEP_
+
 		auto& sColData = m_StationaryCollisionData.at(i);
-#else
-		auto& sColData = m_StationaryCollisionData.at(i);
-#endif
 		// Collision setup
 		sColData.position = Vector2f(positionXDist(rng), positionYDist(rng));
 #ifdef _RANDOM_RADIUS_
@@ -52,10 +49,8 @@ simulator::simulator(uint32_t seed)
 		sUniqueData.name = "S" + std::to_string(i);
 
 		// Store reference to unique array if using better algorithm
-	#ifdef _LINE_SWEEP_
 		auto& uniqueIndex = m_StationaryCollisionData.at(i).uniqueIndex;
 		uniqueIndex = i;
-	#endif
 		
 	}
 

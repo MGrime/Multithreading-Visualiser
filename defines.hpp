@@ -30,14 +30,11 @@ using Eigen::Vector3f;
 // Also TL-Engine input will be REALLY laggy and strange
 // Lower number of circles if performance is bad on rendering. You can also increase the Spawn range to reduce multiple collisions per frame
 // 100k seems to be the upper limit with my PC (Ryzen 5 1600 AF, RTX 2070)
-//#define _USE_TL_ENGINE_
+// #define _USE_TL_ENGINE_
 
 // will randomise radiuses of circles
 // Increases collision a lot
-//#define _RANDOM_RADIUS_
-
-// Will enable walls around the edge of the simulation that bounce back the circles
-#define _EXTERNAL_WALLS_
+// #define _RANDOM_RADIUS_
 
 #pragma endregion
 
@@ -46,7 +43,7 @@ using Eigen::Vector3f;
 constexpr unsigned int	NUM_OF_CIRCLES = 2000000;
 constexpr unsigned int	NUM_STATIONARY_CIRCLES = NUM_OF_CIRCLES / 2;
 constexpr unsigned int	NUM_MOVING_CIRCLES = NUM_OF_CIRCLES / 2;
-constexpr uint32_t		SPAWN_SEED = 10000u;
+constexpr uint32_t		SPAWN_SEED = 17052021u;
 
 const Vector2f X_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
 const Vector2f Y_SPAWN_RANGE = Vector2f(-1000.0f, 1000.0f);
